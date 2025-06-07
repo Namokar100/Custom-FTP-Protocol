@@ -1,4 +1,4 @@
-from ftpserver.commands import access_control, informational
+from ftpserver.commands import access_control, informational, directory_ops
 
 class CommandDispatcher:
     def __init__(self, session):
@@ -8,6 +8,10 @@ class CommandDispatcher:
             "PASS": access_control.PassCommand(),
             "QUIT": access_control.QuitCommand(),
             "NOOP": informational.NoopCommand(),
+            "PWD": directory_ops.PwdCommand(),
+            "CWD": directory_ops.CwdCommand(),
+            "LIST": directory_ops.ListCommand(),
+            "NLST": directory_ops.NlstCommand(),
         }
 
     def dispatch(self, command_line):
