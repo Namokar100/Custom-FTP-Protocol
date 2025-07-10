@@ -1,0 +1,21 @@
+{
+  "users": [
+    {
+      "username": "admin",
+      "password": "$2b$12$DojZTFNaIJlt9ydhx6JSxufWL3K6/nb7QNPSGYytAUpUfSedJopRe",
+      "role": "admin",
+      "permissions": []
+    },
+    {
+      "username": "namokar",
+      "password": "$2b$12$29yTED.nh5qVubNxmk7NMOMa3ubMMMKWcA1DhFHyzlNel.g9KJfNa",
+      "role": "user",
+      "permissions": [
+        "LS",
+        "PWD",
+        "CD",
+        "CAT"
+      ]
+    }
+  ]
+}

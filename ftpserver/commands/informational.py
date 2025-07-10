@@ -5,7 +5,7 @@ class NoopCommand:
 class HelpCommand:
     def handle(self, args, session):
         help_text = (
-            "214-Available commands:\r\n"
+            "Available commands:\r\n"
             "USER <username>         - Login with username\r\n"
             "PASS <password>         - Login with password\r\n"
             "QUIT                    - Close the connection\r\n"
@@ -29,6 +29,6 @@ class HelpCommand:
             "ECHO <text>             - Echo text to output\r\n"
             "ECHO <text> > <file>    - Write text to file\r\n"
             "HELP                    - Show this help message\r\n"
-            "214 End of HELP\r\n"
+            "End of HELP\r\n"
         )
         return help_text

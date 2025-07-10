@@ -28,6 +28,12 @@ class CommandDispatcher:
             "TOUCH": file_actions.TouchCommand(),
             "ECHO": file_actions.EchoCommand(),
             "HELP": informational.HelpCommand(),
+            # Admin commands
+            "ADDUSER": access_control.AddUserCommand(),
+            "DELUSER": access_control.DelUserCommand(),
+            "SETROLE": access_control.SetRoleCommand(),
+            "GRANT": access_control.GrantCommand(),
+            "REVOKE": access_control.RevokeCommand(),
         }
 
     def dispatch(self, command_line):
@@ -39,7 +45,14 @@ class CommandDispatcher:
         args = parts[1:] if len(parts) > 1 else []
 
         handler = self.commands.get(cmd)
+        # Allow login and admin commands without permission check
+        admin_cmds = {"USER", "PASS", "QUIT", "HELP", "ADDUSER", "DELUSER", "SETROLE", "GRANT", "REVOKE"}
         if handler:
+            if cmd in admin_cmds:
+                return handler.handle(args, self.session)
+            # RBAC: check if user has permission for this command
+            if not (self.session.logged_in and (cmd in getattr(self.session, 'permissions', []) or getattr(self.session, 'role', None) == 'admin')):
+                return f"permission denied for {cmd}\r\n"
             return handler.handle(args, self.session)
         else:
-            return "502 Command not implemented\r\n"
+            return "Invalid command\r\n"
