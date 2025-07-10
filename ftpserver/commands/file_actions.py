@@ -20,6 +20,8 @@ class RetrCommand:
 
 import os
 import shutil
+import stat
+import time
 from ftpserver.utils.filesystem import resolve_path
 
 class StorCommand:
@@ -110,3 +112,62 @@ class MvCommand:
             return "250 Move successful\r\n"
         except Exception as e:
             return f"550 Failed to move: {e}\r\n"
+
+class StatCommand:
+    def handle(self, args, session):
+        if not session.logged_in:
+            return "530 Not logged in\r\n"
+        if not args:
+            return "501 Missing filename or directory\r\n"
+        try:
+            path = resolve_path(session.cwd, args[0])
+            st = os.stat(path)
+            perms = stat.filemode(st.st_mode)
+            nlink = st.st_nlink
+            owner = st.st_uid if hasattr(st, 'st_uid') else 0
+            group = st.st_gid if hasattr(st, 'st_gid') else 0
+            size = st.st_size
+            mtime = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(st.st_mtime))
+            info = f"Path: {args[0]}\r\nType: {'Directory' if os.path.isdir(path) else 'File'}\r\nPermissions: {perms}\r\nLinks: {nlink}\r\nOwner: {owner}\r\nGroup: {group}\r\nSize: {size} bytes\r\nModified: {mtime}\r\n"
+            return f"213-STAT info follows\r\n{info}213 End of STAT info\r\n"
+        except Exception as e:
+            return f"550 Failed to stat: {e}\r\n"
+
+class TouchCommand:
+    def handle(self, args, session):
+        if not session.logged_in:
+            return "530 Not logged in\r\n"
+        if not args:
+            return "501 Missing filename\r\n"
+        try:
+            file_path = resolve_path(session.cwd, args[0])
+            with open(file_path, 'a'):
+                os.utime(file_path, None)
+            return "250 File touched\r\n"
+        except Exception as e:
+            return f"550 Failed to touch file: {e}\r\n"
+
+class EchoCommand:
+    def handle(self, args, session):
+        if not session.logged_in:
+            return "530 Not logged in\r\n"
+        if not args:
+            return "501 Missing arguments\r\n"
+        # Support echo "hello" > a.txt
+        if '>' in args:
+            idx = args.index('>')
+            content = ' '.join(args[:idx])
+            filename = args[idx+1] if len(args) > idx+1 else None
+            if not filename:
+                return "501 Missing filename after >\r\n"
+            try:
+                file_path = resolve_path(session.cwd, filename)
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    f.write(content.strip('"'))
+                return "250 Echoed to file\r\n"
+            except Exception as e:
+                return f"550 Failed to echo to file: {e}\r\n"
+        else:
+            # Just echo to output
+            content = ' '.join(args)
+            return f"200 {content.strip('')}\r\n"
