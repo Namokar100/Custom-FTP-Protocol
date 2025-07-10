@@ -69,37 +69,38 @@ def hash_password(password):
 class UserCommand:
     def handle(self, args, session):
         if not args:
-            return "530 User name required.\r\n"
+            return "user: missing username"
         session.username = args[0]
         session.logged_in = False
         user = find_user(session.username)
         session.user_obj = user
         session.cwd = "/"  # All users start in the same directory
         if user:
-            return "331 User name okay, need password.\r\n"
+            return "user accepted\n"
         else:
-            return "530 Not logged in.\r\n"
+            return "user: unknown user\n"
 
 class PassCommand:
     def handle(self, args, session):
         if not session.username:
-            return "503 Login with USER first.\r\n"
+            return "pass: login with USER first\n"
         if not args:
-            return "501 Password required.\r\n"
+            return "pass: missing password\n"
         user = session.user_obj
         try:
+            # User enters plaintext password; we compare it to the stored hash using bcrypt
             if user and check_password(user['password'], args[0]):
                 session.logged_in = True
                 session.role = user['role']
                 session.permissions = user.get('permissions', [])
-                return "230 User logged in, proceed.\r\n"
+                return f"user logged in as {session.role}\n"
             else:
                 session.logged_in = False
-                return "530 Not logged in.\r\n"
+                return "pass: incorrect password\n"
         except Exception as e:
             logger.error(f"Authentication error: {e}")
             session.logged_in = False
-            return "530 Not logged in.\r\n"
+            return "pass: authentication error\n"
 
 class QuitCommand:
     def handle(self, args, session):
