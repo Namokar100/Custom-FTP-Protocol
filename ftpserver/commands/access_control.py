@@ -15,29 +15,29 @@ def load_users():
 class UserCommand:
     def handle(self, args, session):
         if not args:
-            return "501 Syntax error in parameters or arguments.\r\n"
+            return "user: missing username"
         session.username = args[0]
-        session.logged_in = False  # Reset login state on new USER
+        session.logged_in = False
         session._user_db = load_users()
         if session.username in session._user_db:
-            return "331 User name okay, need password.\r\n"
+            return "user accepted"
         else:
-            return "530 Not logged in.\r\n"
+            return "user: unknown user"
 
 class PassCommand:
     def handle(self, args, session):
         if not session.username:
-            return "503 Bad sequence of commands.\r\n"
+            return "pass: login with USER first"
         if not args:
-            return "501 Syntax error in parameters or arguments.\r\n"
+            return "pass: missing password"
         expected_password = session._user_db.get(session.username)
         if expected_password and args[0] == expected_password:
             session.logged_in = True
-            return "230 User logged in, proceed.\r\n"
+            return "user logged in"
         else:
             session.logged_in = False
-            return "530 Not logged in.\r\n"
+            return "pass: incorrect password"
 
 class QuitCommand:
     def handle(self, args, session):
-        return "221 Service closing control connection.\r\n"
+        return "goodbye"
