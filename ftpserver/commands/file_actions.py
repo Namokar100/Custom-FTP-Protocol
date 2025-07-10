@@ -3,9 +3,9 @@ from ftpserver.utils.filesystem import resolve_path
 class RetrCommand:
     def handle(self, args, session):
         if not session.logged_in:
-            return "530 Not logged in\r\n"
+            return "login required"
         if not args:
-            return "501 Missing filename\r\n"
+            return "retr: missing file operand"
         try:
             file_path = resolve_path(session.cwd, args[0])
             with open(file_path, 'rb') as f:
@@ -14,9 +14,9 @@ class RetrCommand:
                 data = f.read()
                 conn.sendall(data)
                 conn.close()
-            return "226 File transfer complete\r\n"
+            return "file sent"
         except Exception as e:
-            return f"550 Failed to retrieve file: {e}\r\n"
+            return f"retr: {e}"
 
 import os
 import shutil
@@ -27,12 +27,11 @@ from ftpserver.utils.filesystem import resolve_path
 class StorCommand:
     def handle(self, args, session):
         if not session.logged_in:
-            return "530 Not logged in\r\n"
+            return "login required"
         if not args:
-            return "501 Missing filename\r\n"
+            return "stor: missing file operand"
         try:
             file_path = resolve_path(session.cwd, args[0])
-            # Ensure parent directory exists
             os.makedirs(os.path.dirname(file_path), exist_ok=True)
             conn = session.data_channel.open()
             session.data_channel.close()
@@ -43,51 +42,49 @@ class StorCommand:
                         break
                     f.write(data)
             conn.close()
-            return "226 File upload complete\r\n"
+            return "file stored"
         except Exception as e:
-            return f"550 Failed to store file: {e}\r\n"
+            return f"stor: {e}"
         
 class CatCommand:
     def handle(self, args, session):
         if not session.logged_in:
-            return "530 Not logged in\r\n"
+            return "login required"
         if not args:
-            return "501 Missing filename\r\n"
+            return "cat: missing file operand"
         try:
             file_path = resolve_path(session.cwd, args[0])
             with open(file_path, 'r', encoding='utf-8') as f:
-                data = f.read(4096)  # Limit to 4KB for safety
-            # If file is longer, indicate truncation
+                data = f.read(4096)
             if len(data) == 4096:
-                data += "\n... (truncated)\n"
-            # FTP lines end with \r\n
-            return f"150 Opening file\r\n{data}\r\n226 File display complete\r\n"
+                data += "\n... (truncated)"
+            return data
         except Exception as e:
-            return f"550 Failed to display file: {e}\r\n"
+            return f"cat: {e}"
 
 class RmCommand:
     def handle(self, args, session):
         if not session.logged_in:
-            return "530 Not logged in\r\n"
+            return "login required"
         if not args:
-            return "501 Missing filename\r\n"
+            return "rm: missing operand"
         try:
             file_path = resolve_path(session.cwd, args[0])
             os.remove(file_path)
-            return "250 File deleted\r\n"
+            return "file removed"
         except FileNotFoundError:
-            return "550 File not found\r\n"
+            return f"rm: cannot remove '{args[0]}': No such file or directory"
         except IsADirectoryError:
-            return "550 Path is a directory, use RMD or RM -R\r\n"
+            return f"rm: cannot remove '{args[0]}': Is a directory"
         except Exception as e:
-            return f"550 Failed to delete file: {e}\r\n"
+            return f"rm: cannot remove '{args[0]}': {e}"
 
 class CpCommand:
     def handle(self, args, session):
         if not session.logged_in:
-            return "530 Not logged in\r\n"
+            return "login required"
         if len(args) < 2:
-            return "501 Missing source or destination\r\n"
+            return "cp: missing file operand"
         try:
             src = resolve_path(session.cwd, args[0])
             dst = resolve_path(session.cwd, args[1])
@@ -95,30 +92,34 @@ class CpCommand:
                 shutil.copytree(src, dst)
             else:
                 shutil.copy2(src, dst)
-            return "250 Copy successful\r\n"
+            return "file copied"
+        except FileNotFoundError:
+            return f"cp: cannot stat '{args[0]}': No such file or directory"
         except Exception as e:
-            return f"550 Failed to copy: {e}\r\n"
+            return f"cp: {e}"
 
 class MvCommand:
     def handle(self, args, session):
         if not session.logged_in:
-            return "530 Not logged in\r\n"
+            return "login required"
         if len(args) < 2:
-            return "501 Missing source or destination\r\n"
+            return "mv: missing file operand"
         try:
             src = resolve_path(session.cwd, args[0])
             dst = resolve_path(session.cwd, args[1])
             os.rename(src, dst)
-            return "250 Move successful\r\n"
+            return "file moved"
+        except FileNotFoundError:
+            return f"mv: cannot stat '{args[0]}': No such file or directory"
         except Exception as e:
-            return f"550 Failed to move: {e}\r\n"
+            return f"mv: {e}"
 
 class StatCommand:
     def handle(self, args, session):
         if not session.logged_in:
-            return "530 Not logged in\r\n"
+            return "login required"
         if not args:
-            return "501 Missing filename or directory\r\n"
+            return "stat: missing operand"
         try:
             path = resolve_path(session.cwd, args[0])
             st = os.stat(path)
@@ -128,46 +129,46 @@ class StatCommand:
             group = st.st_gid if hasattr(st, 'st_gid') else 0
             size = st.st_size
             mtime = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(st.st_mtime))
-            info = f"Path: {args[0]}\r\nType: {'Directory' if os.path.isdir(path) else 'File'}\r\nPermissions: {perms}\r\nLinks: {nlink}\r\nOwner: {owner}\r\nGroup: {group}\r\nSize: {size} bytes\r\nModified: {mtime}\r\n"
-            return f"213-STAT info follows\r\n{info}213 End of STAT info\r\n"
+            info = f"  File: {args[0]}\n  Type: {'Directory' if os.path.isdir(path) else 'File'}\n  Size: {size} bytes\n  Permissions: {perms}\n  Links: {nlink}\n  Owner: {owner}\n  Group: {group}\n  Modified: {mtime}"
+            return info
         except Exception as e:
-            return f"550 Failed to stat: {e}\r\n"
+            return f"stat: {e}"
 
 class TouchCommand:
     def handle(self, args, session):
         if not session.logged_in:
-            return "530 Not logged in\r\n"
+            return "login required"
         if not args:
-            return "501 Missing filename\r\n"
+            return "touch: missing file operand"
         try:
             file_path = resolve_path(session.cwd, args[0])
             with open(file_path, 'a'):
                 os.utime(file_path, None)
-            return "250 File touched\r\n"
+            return "file touched"
         except Exception as e:
-            return f"550 Failed to touch file: {e}\r\n"
+            return f"touch: cannot touch '{args[0]}': {e}"
 
 class EchoCommand:
     def handle(self, args, session):
         if not session.logged_in:
-            return "530 Not logged in\r\n"
+            return "login required"
         if not args:
-            return "501 Missing arguments\r\n"
+            return "echo: missing arguments"
         # Support echo "hello" > a.txt
         if '>' in args:
             idx = args.index('>')
             content = ' '.join(args[:idx])
             filename = args[idx+1] if len(args) > idx+1 else None
             if not filename:
-                return "501 Missing filename after >\r\n"
+                return "echo: missing filename after >"
             try:
                 file_path = resolve_path(session.cwd, filename)
                 with open(file_path, 'w', encoding='utf-8') as f:
                     f.write(content.strip('"'))
-                return "250 Echoed to file\r\n"
+                return "echoed to file"
             except Exception as e:
-                return f"550 Failed to echo to file: {e}\r\n"
+                return f"echo: cannot write to '{filename}': {e}"
         else:
             # Just echo to output
             content = ' '.join(args)
-            return f"200 {content.strip('')}\r\n"
+            return content.strip('"')

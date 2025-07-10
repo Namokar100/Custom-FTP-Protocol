@@ -27,6 +27,7 @@ class CommandDispatcher:
             "STAT": file_actions.StatCommand(),
             "TOUCH": file_actions.TouchCommand(),
             "ECHO": file_actions.EchoCommand(),
+            "HELP": informational.HelpCommand(),
         }
 
     def dispatch(self, command_line):
