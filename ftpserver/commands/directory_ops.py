@@ -2,10 +2,14 @@ from ftpserver.utils.filesystem import resolve_path, list_dir, change_directory
 
 class PwdCommand:
     def handle(self, args, session):
+        if not session.logged_in:
+            return "530 Not logged in\r\n"
         return f'257 "{session.cwd}" is the current directory\r\n'
 
 class CwdCommand:
     def handle(self, args, session):
+        if not session.logged_in:
+            return "530 Not logged in\r\n"
         if not args:
             return "501 Missing directory path\r\n"
         try:
@@ -18,6 +22,8 @@ class CwdCommand:
 
 class ListCommand:
     def handle(self, args, session):
+        if not session.logged_in:
+            return "530 Not logged in\r\n"
         try:
             path = resolve_path(session.cwd, args[0] if args else ".")
             files = list_dir(path)
@@ -28,6 +34,8 @@ class ListCommand:
 
 class NlstCommand:
     def handle(self, args, session):
+        if not session.logged_in:
+            return "530 Not logged in\r\n"
         try:
             path = resolve_path(session.cwd, args[0] if args else ".")
             files = list_dir(path)
