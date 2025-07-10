@@ -16,7 +16,17 @@ class CommandDispatcher:
             "PASV": transfer_modes.PasvCommand(),
             "RETR": file_actions.RetrCommand(),
             "STOR": file_actions.StorCommand(),
-            "CAT": file_actions.CatCommand(), 
+            "CAT": file_actions.CatCommand(),
+            "MKDIR": directory_ops.MkdirCommand(),
+            "RMDIR": directory_ops.RmdirCommand(),
+            "RM": file_actions.RmCommand(),
+            "RM-R": directory_ops.RmRecursiveCommand(),
+            "CP": file_actions.CpCommand(),
+            "MV": file_actions.MvCommand(),
+            "LS-L": directory_ops.LsLongCommand(),
+            "STAT": file_actions.StatCommand(),
+            "TOUCH": file_actions.TouchCommand(),
+            "ECHO": file_actions.EchoCommand(),
         }
 
     def dispatch(self, command_line):
